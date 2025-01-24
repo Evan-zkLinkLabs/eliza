@@ -7,8 +7,9 @@ import {
     State,
 } from "@elizaos/core";
 import { OtcProtocol } from "../types";
+import { initializeSharedData } from "../types/sharedData";
 
-const sampleProtocols: OtcProtocol[] = [
+export const sampleProtocols: OtcProtocol[] = [
     {
         protocolId: "htlc",
         protocolName: "Hash Time-Locked Contract",
@@ -39,7 +40,10 @@ export const listProtocolsAction: Action = {
     name: "LIST_OTC_PROTOCOLS",
     similes: ["SHOW_PROTOCOLS", "PROTOCOL_OPTIONS", "OTC_METHODS"],
     description: "List available OTC protocols for user reference.",
-    validate: async (_runtime) => true,
+    validate: async (_runtime, _message, state: State) => {
+        initializeSharedData(state);
+        return true;
+    },
     handler: async (
         _runtime: IAgentRuntime,
         _message: Memory,

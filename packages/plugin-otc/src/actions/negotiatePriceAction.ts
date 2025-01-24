@@ -11,9 +11,11 @@ import {
     generateObjectDeprecated,
 } from "@elizaos/core";
 import { OtcError } from "../types";
+import { initializeSharedData } from "../types/sharedData";
 import { InMemoryOtcTaskManager } from "../InMemoryOtcTaskManager";
+import { decideNextStep } from "../negotiationStrategy";
 
-const negotiationPrompt = `The user or remote peer provided a new price offer. Extract in JSON:
+const negotiationPrompt = `A new price offer has been provided. Extract in JSON:
   \`\`\`json
   {
     "offeredPrice": 950,
@@ -28,6 +30,7 @@ export const negotiatePriceAction: Action = {
     description:
         "OTC Negotiator: parse new offered price and update the ongoing task.",
     async validate(runtime: IAgentRuntime, message: Memory, state: State) {
+        initializeSharedData(state);
         return true;
     },
     async handler(
@@ -76,17 +79,42 @@ export const negotiatePriceAction: Action = {
                 offeredPrice: Number(result.offeredPrice),
                 notes: result.notes || "",
             };
-            const oldContext = task.negotiationContext || { rounds: [] };
+            const oldContext = task.negotiationContext || { 
+                rounds: [],
+                itemName: task.title,
+                baseCurrency: "USDT"
+            };
             oldContext.rounds.push(newRound);
+            
+            // Use negotiation strategy to decide next step
+            const decision = decideNextStep(
+                newRound.offeredPrice,
+                oldContext,
+                task.targetPriceRange as [number, number]
+            );
+            
+            const status = decision.accept ? "ACCEPTED" : "IN_PROGRESS";
             manager.updateTask(taskId, {
                 negotiationContext: oldContext,
-                status: "IN_PROGRESS",
+                status,
             });
 
             if (callback) {
+                const responseText = decision.accept
+                    ? `Accepting the offer of ${newRound.offeredPrice} ${oldContext.baseCurrency}. ${decision.reason}`
+                    : `Current offer: ${newRound.offeredPrice} ${oldContext.baseCurrency}. ${decision.reason}${
+                        decision.counterOffer 
+                            ? `. Counter-offering: ${decision.counterOffer} ${oldContext.baseCurrency}`
+                            : ""
+                    }`;
+                
                 callback({
-                    text: `Noted the new offer: ${newRound.offeredPrice}`,
-                    content: { newRound, updatedTask: manager.getTask(taskId) },
+                    text: responseText,
+                    content: { 
+                        newRound,
+                        decision,
+                        updatedTask: manager.getTask(taskId)
+                    },
                 });
             }
             return true;

@@ -1,6 +1,7 @@
 // plugin-otc/actions/finalizeOtcDealAction.ts
 import {
     Action,
+    ActionExample,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -10,24 +11,29 @@ import {
     ModelClass,
 } from "@elizaos/core";
 import { OtcError } from "../types";
+import { initializeSharedData } from "../types/sharedData";
 import { InMemoryOtcTaskManager } from "../InMemoryOtcTaskManager";
+import { sampleProtocols } from "./listProtocolsAction";
+import { executeTransaction } from "../transactionExecutor";
 
-const finalizePrompt = `We are about to finalize this OTC deal. Provide a JSON object with:
+const finalizePrompt = `Finalizing the OTC deal. Provide a JSON object with:
   \`\`\`json
   {
     "finalPrice": 980,
     "chosenProtocol": "htlc",
-    "notes": "We both agreed to finalize at 980 USDT"
+    "notes": "Agreement reached at 980 USDT"
   }
   \`\`\`
   `;
 
 export const finalizeOtcDealAction: Action = {
+    examples: [] as ActionExample[][],
     name: "FINALIZE_OTC_DEAL",
     similes: ["finalize", "finalize deal", "finalize otc deal"],
     description:
         "OTC Negotiator: finalize the deal by setting final price and chosen protocol.",
     async validate(runtime: IAgentRuntime, message: Memory, state: State) {
+        initializeSharedData(state);
         if (!state.sharedData.currentTaskId) {
             throw new OtcError("No currentTaskId in sharedData");
         }
@@ -38,7 +44,7 @@ export const finalizeOtcDealAction: Action = {
                 `No such task: ${state.sharedData.currentTaskId}`
             );
         }
-        if (task.status !== "accepted") {
+        if (task.status !== "ACCEPTED") {
             throw new OtcError(
                 `Cannot finalize task in status: ${task.status}`
             );
@@ -78,11 +84,35 @@ export const finalizeOtcDealAction: Action = {
                 throw new OtcError(`No such task: ${taskId}`);
             }
 
-            // update
+            // Validate chosen protocol
+            const validProtocol = sampleProtocols.find(
+                (proto) => proto.protocolId === result.chosenProtocol
+            );
+            if (!validProtocol) {
+                throw new OtcError(`Invalid protocol: ${result.chosenProtocol}`);
+            }
+
+            // Execute transaction
+            const transactionResult = await executeTransaction(
+                result.finalPrice,
+                validProtocol.protocolId,
+                task.negotiationContext?.baseCurrency
+            );
+
+            if (!transactionResult.success) {
+                throw new OtcError(
+                    `Transaction failed: ${transactionResult.error || "Unknown error"}`
+                );
+            }
+
+            // Update with validated protocol and transaction details
             manager.updateTask(taskId, {
-                chosenProtocol: result.chosenProtocol,
+                chosenProtocol: validProtocol.protocolId,
+                transactionId: transactionResult.transactionId,
             });
-            manager.finalizeTask(taskId, result.notes);
+            manager.finalizeTask(taskId, 
+                `${result.notes}\nTransaction ID: ${transactionResult.transactionId}`
+            );
 
             if (callback) {
                 callback({

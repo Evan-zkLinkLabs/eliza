@@ -13,14 +13,15 @@ import {
 import { OtcTaskSchema } from "../tasks";
 import { InMemoryOtcTaskManager } from "../InMemoryOtcTaskManager";
 import { OtcError } from "../types";
+import { initializeSharedData } from "../types/sharedData";
 
-const creationPrompt = `A user wants to create a new OTC task. Extract the following JSON:
+const creationPrompt = `Creating a new OTC task. Extract the following JSON:
   \`\`\`json
   {
     "taskId": "<uuid>",
-    "title": "Sell My BTC",
+    "title": "Sell BTC",
     "taskType": "SHORT_TERM",
-    "description": "I want to sell BTC around 28000-29000 range within a week",
+    "description": "Sell BTC in 28000-29000 range within a week",
     "targetPriceRange": [28000, 29000],
     "deadline": 1687526400000
   }
@@ -32,6 +33,7 @@ export const createOtcTaskAction: Action = {
     similes: ["create a new OTC task"],
     description: "Owner command: create a new OTC task",
     async validate(runtime: IAgentRuntime, message: Memory, state: State) {
+        initializeSharedData(state);
         return true;
     },
     async handler(
