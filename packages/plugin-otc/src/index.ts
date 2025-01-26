@@ -33,3 +33,5 @@ export const otcNegotiatorPlugin: Plugin = {
     evaluators: [],
     providers: [],
 };
+
+export default otcNegotiatorPlugin;

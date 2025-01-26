@@ -356,6 +356,9 @@ importers:
       '@elizaos/plugin-openai':
         specifier: workspace:*
         version: link:../packages/plugin-openai
+      '@elizaos/plugin-otc':
+        specifier: workspace:*
+        version: link:../packages/plugin-otc
       '@elizaos/plugin-primus':
         specifier: workspace:*
         version: link:../packages/plugin-primus
