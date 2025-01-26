@@ -6,6 +6,7 @@ export const TaskTypeSchema = z.enum(["IMMEDIATE", "SHORT_TERM", "LONG_TERM"]);
 export const TaskStatusSchema = z.enum([
     "CREATED",
     "IN_PROGRESS",
+    "ACCEPTED",
     "FINALIZED",
     "ARCHIVED",
 ]);
@@ -21,10 +22,11 @@ export const OtcTaskSchema = z.object({
     status: TaskStatusSchema.default("CREATED"),
     negotiationContext: NegotiationContextSchema.optional(),
     chosenProtocol: z.string().optional(),
+    transactionId: z.string().optional(),
 });
 
 export type OtcTask = z.infer<typeof OtcTaskSchema>;
-
+export type TaskStatusSchemaType = z.infer<typeof TaskStatusSchema>;
 export interface OtcTaskManager {
     createTask(taskData: OtcTask): OtcTask;
     updateTask(taskId: string, partial: Partial<OtcTask>): OtcTask | undefined;

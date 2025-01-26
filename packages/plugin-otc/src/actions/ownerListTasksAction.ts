@@ -1,6 +1,7 @@
 // plugin-otc/actions/ownerListTasksAction.ts
 import {
     Action,
+    ActionExample,
     HandlerCallback,
     IAgentRuntime,
     Memory,
@@ -9,6 +10,9 @@ import {
 import { InMemoryOtcTaskManager } from "../InMemoryOtcTaskManager";
 
 export const ownerListTasksAction: Action = {
+    similes: ["list tasks", "show tasks", "view tasks"],
+    validate: async (_runtime, _message, _state) => true,
+    examples: [] as ActionExample[][],
     name: "OWNER_LIST_TASKS",
     description: "Owner command: list all tasks",
     async handler(

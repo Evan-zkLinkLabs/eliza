@@ -24,7 +24,7 @@ export type OtcProtocol = z.infer<typeof OtcProtocolSchema>;
 export class OtcError extends Error {
     constructor(
         message: string,
-        public details?: unknown
+        public details?: unknown,
     ) {
         super(message);
         this.name = "OtcError";
